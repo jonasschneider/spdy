@@ -5,6 +5,9 @@ module SPDY
     DATA_BIT    = 0
     VERSION     = 2
 
+    FLAG_FIN        = 1
+    FLAG_NOCOMPRESS = 2
+
     SETTINGS_UPLOAD_BANDWIDTH = 1
     SETTINGS_DOWNLOAD_BANDWIDTH = 2
     SETTINGS_ROUND_TRIP_TIME = 3
@@ -21,10 +24,15 @@ module SPDY
         def parse(chunk)
           head = Control::Header.new.read(chunk)
           self.read(chunk)
-          
-          if data.length > 0
-            data = @zlib_session.inflate(self.data.to_s)
-            self.uncompressed_data = NV.new.read(data)
+
+          if self.data.length > 0
+            if (head.flags & FLAG_NOCOMPRESS) == FLAG_NOCOMPRESS
+              uncompressed = self.data.to_s
+            else
+              uncompressed = @zlib_session.inflate(self.data.to_s)
+            end
+
+            self.uncompressed_data = NV.new.read(uncompressed)
           else
             self.uncompressed_data = NV.new
           end
@@ -41,11 +49,16 @@ module SPDY
 
           nv = SPDY::Protocol::NV.new
           nv.create(opts[:headers])
+          
+          if (self.header.flags & FLAG_NOCOMPRESS) == FLAG_NOCOMPRESS
+            data = nv.to_binary_s
+          else
+            data = @zlib_session.deflate(nv.to_binary_s)
+          end
 
-          nv = @zlib_session.deflate(nv.to_binary_s)
-          self.header.len = self.header.len.to_i + nv.size
+          self.data = data
 
-          self.data = nv
+          self.header.len = self.header.len.to_i + data.size
 
           self
         end

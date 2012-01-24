@@ -72,6 +72,26 @@ describe SPDY::Protocol do
 
         sr.to_binary_s.should == SYN_STREAM
       end
+
+      it "should create and parse a SYN_STREAM packet with NOCOMPRESS flag" do
+        headers = {
+          "accept"=>"application/xml", "host"=>"127.0.0.1:9000",
+          "method"=>"GET", "scheme"=>"https",
+          "url"=>"/?echo=a&format=json","version"=>"HTTP/1.1"
+        }
+
+        nv = SPDY::Protocol::NV.new
+        wanted_data = nv.create(headers).to_binary_s
+
+        sr = SPDY::Protocol::Control::SynStream.new
+        sr.create({:stream_id => 1, :headers => headers, :flags => SPDY::Protocol::FLAG_NOCOMPRESS})
+
+        sr.data.should == wanted_data
+
+        st = SPDY::Protocol::Control::SynStream.new
+        st.parse(sr.to_binary_s)
+        st.uncompressed_data.to_h.should == headers
+      end
       
       it "should parse a SYN_STREAM without headers" do
         zlib_session = SPDY::Zlib.new
