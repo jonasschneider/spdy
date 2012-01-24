@@ -5,8 +5,9 @@ module SPDY
     DATA_BIT    = 0
     VERSION     = 2
 
-    FLAG_FIN        = 1
-    FLAG_NOCOMPRESS = 2
+    FLAG_FIN            = 1
+    FLAG_UNIDIRECTIONAL = 2
+    FLAG_NOCOMPRESS     = 4
 
     SETTINGS_UPLOAD_BANDWIDTH = 1
     SETTINGS_DOWNLOAD_BANDWIDTH = 2
